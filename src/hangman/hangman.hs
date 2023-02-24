@@ -1,6 +1,7 @@
 import System.IO
 import System.Random
 import Data.Char
+import Data.List
 
 -- define the hangman game
 hangman :: IO ()
@@ -14,48 +15,45 @@ hangman = do
   if difficulty == "1"
     then do
       (word, hint) <- randomWordAndHint
-      play word []
+      play word []  (map (const '_') (init word))
     else if difficulty == "2"
       then do
         (word, hint) <- randomWordAndHint
-        play word []
+        play word []  (map (const '_') (init word))
       else if difficulty == "3"
         then do
           (word, hint) <- randomWordAndHint
-          play word []
+          play word []  (map (const '_') (init word))
         else if difficulty == "4"
           then do
             (word, hint) <- randomWordAndHint
-            play word hint
+            play word hint  (replicate ((length word) - 1) '_')
           else do
             putStrLn "Invalid difficulty level. Please try again."
             hangman
 
 -- define the play function
-play :: String -> String -> IO ()
-play word hint = do
- -- let showGuess = map (\c -> if c `elem` guessedLetters then c else '_') word
-  --where guessedLetters = guess
+play :: String -> String -> String -> IO ()
+play word hint guessed = do
   putStrLn (showHint hint)
-  putStrLn (showGuess word)
+  putStrLn (guessed)
   putStrLn "Enter your guess:"
   guess <- getLine
-  --if isCorrect guess word
-  if guess == word
+  if isCorrect guess word
     then putStrLn (word ++ "\n" ++ "You win!")
     else if length guess == 1
       then do
-        let newWord = checkGuess word (head guess) -- fix here
-        if newWord /= word
+        let newGuessed = checkGuess word (head guess) guessed
+        if newGuessed == guessed
           then do
             putStrLn "Incorrect guess!"
-            play word hint
-          else if newWord == map toLower word
-            then putStrLn (word ++ "\n" ++ "You win!")
-            else play newWord hint
+            play word hint guessed
+          else if '_' `notElem` newGuessed
+            then putStrLn (newGuessed ++ "\n" ++ "You win!")
+            else play word hint newGuessed
       else do
         putStrLn "Invalid guess. Please try again."
-        play word hint
+        play word hint guessed
 
 -- define the isCorrect function
 isCorrect :: String -> String -> Bool
@@ -69,22 +67,10 @@ showHint hint =
     then ""
     else "Hint: " ++ hint
 
--- define the showGuess function
-showGuess :: String -> String
-showGuess word =
-  if word == ""
-    then ""
-    else "_" ++ ((tail word))
---showGuess word = map (\c -> if c `elem` guessedLetters then c else '_') word
-  --where guessedLetters = tail word
-
--- define the checkGuess function
-checkGuess :: String -> Char -> String
-checkGuess word guess
-  | word == ""   = ""
-  | head word == guess = guess : (checkGuess (tail word) guess)
-  | otherwise    = (head word) : (checkGuess (tail word) guess)
-
+checkGuess :: String -> Char -> String -> String
+checkGuess word guess guessed =  
+  [if c == guess && g == '_' then c else g | (c, g) <- zip word guessed]
+  
 -- define the randomWordAndHint function
 randomWordAndHint :: IO (String, String)
 randomWordAndHint = do
