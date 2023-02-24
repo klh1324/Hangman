@@ -2,6 +2,7 @@ import System.IO
 import System.Random
 import Data.Char
 import Data.List
+import Control.Monad (replicateM)
 
 -- define the hangman game
 hangman :: IO ()
@@ -15,15 +16,20 @@ hangman = do
   if difficulty == "1"
     then do
       (word, hint) <- randomWordAndHint
-      play word []  (map (const '_') (init word))
+      mapIndices <- (mapToRandomIndices (ceiling (fromIntegral (length word) / fromIntegral 4)) (const '_') (init word))
+
+      play word []  mapIndices
     else if difficulty == "2"
       then do
         (word, hint) <- randomWordAndHint
-        play word []  (map (const '_') (init word))
+        mapIndices <- (mapToRandomIndices (ceiling (fromIntegral (length word) / fromIntegral 2)) (const '_') (init word))
+
+        play word []  mapIndices
       else if difficulty == "3"
         then do
           (word, hint) <- randomWordAndHint
-          play word []  (map (const '_') (init word))
+
+          play word [] (replicate ((length word) - 1) '_')
         else if difficulty == "4"
           then do
             (word, hint) <- randomWordAndHint
@@ -31,6 +37,14 @@ hangman = do
           else do
             putStrLn "Invalid difficulty level. Please try again."
             hangman
+
+
+mapToRandomIndices :: Int -> (a -> a) -> [a] -> IO [a]
+mapToRandomIndices n f xs = do
+  let len = length xs
+  indices <- replicateM n $ randomRIO (0, len - 1)
+  return $ map (\(i, x) -> if i `elem` indices then f x else x) $ zip [0..] xs
+
 
 -- define the play function
 play :: String -> String -> String -> IO ()
