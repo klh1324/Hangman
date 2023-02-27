@@ -4,6 +4,8 @@ import Data.Char
 import Data.List
 import Control.Monad (replicateM)
 
+guessLimit = 7
+
 -- define the hangman game
 hangman :: IO ()
 hangman = do
@@ -16,24 +18,21 @@ hangman = do
   if difficulty == "1"
     then do
       (word, hint) <- randomWordAndHint
-      mapIndices <- (mapToRandomIndices (ceiling (fromIntegral (length word) / fromIntegral 4)) (const '_') (init word))
-
-      play word []  mapIndices
+      mapIndices <- (mapToRandomIndices (ceiling (fromIntegral (length word) / fromIntegral 4)) (const '_') (word))
+      play word []  mapIndices guessLimit
     else if difficulty == "2"
       then do
         (word, hint) <- randomWordAndHint
-        mapIndices <- (mapToRandomIndices (ceiling (fromIntegral (length word) / fromIntegral 2)) (const '_') (init word))
-
-        play word []  mapIndices
+        mapIndices <- (mapToRandomIndices (ceiling (fromIntegral (length word) / fromIntegral 2)) (const '_') (word))
+        play word []  mapIndices guessLimit
       else if difficulty == "3"
         then do
           (word, hint) <- randomWordAndHint
-
-          play word [] (replicate ((length word) - 1) '_')
+          play word [] (replicate ((length word)) '_') guessLimit
         else if difficulty == "4"
           then do
             (word, hint) <- randomWordAndHint
-            play word hint  (replicate ((length word) - 1) '_')
+            play word hint  (replicate ((length word)) '_') guessLimit
           else do
             putStrLn "Invalid difficulty level. Please try again."
             hangman
@@ -47,39 +46,49 @@ mapToRandomIndices n f xs = do
 
 
 -- define the play function
-play :: String -> String -> String -> IO ()
-play word hint guessed = do
-  putStrLn (showHint hint)
-  putStrLn (guessed)
-  putStrLn "Enter your guess:"
+play :: String -> String -> String -> Integer -> IO ()
+play word hint guessed remainingGuess = do
+  -- putStrLn word
+  -- putStrLn guessed
+  putStr (showHint hint)
+  putStrLn guessed
+  putStrLn ("You have " ++ show remainingGuess ++ " guesses remaning. Enter your guess:")
   guess <- getLine
-  if isCorrect guess word
-    then putStrLn (word ++ "\n" ++ "You win!")
-    else if length guess == 1
-      then do
-        let newGuessed = checkGuess word (head guess) guessed
-        if newGuessed == guessed
-          then do
-            putStrLn "Incorrect guess!"
-            play word hint guessed
-          else if '_' `notElem` newGuessed
-            then putStrLn (newGuessed ++ "\n" ++ "You win!")
-            else play word hint newGuessed
-      else do
-        putStrLn "Invalid guess. Please try again."
-        play word hint guessed
+  if isValidGuess guess
+    then do
+      let newGuessed = checkGuess word (head guess) guessed
+      if newGuessed == guessed -- incorrect guess
+        then do
+          putStrLn ("Incorrect guess! " ++ show (remainingGuess - 1) ++ " guesses remaining!")
+          if (remainingGuess - 1) > 0 
+            then play word hint guessed (remainingGuess - 1) 
+          else putStrLn "Sorry! No more guesses remaining\n"
+      else if '_' `notElem` newGuessed -- correct guess and player wins
+        then do
+          putStrLn ("Correct! you have guessed the word " ++ word ++ "!\n" ++ "You win!")
+      else 
+        do
+        putStrLn ("Correct guess! " ++ show remainingGuess ++ " guesses remaining!")
+        play word hint newGuessed remainingGuess 
+  else do
+    putStrLn "Invalid guess. You must enter a lowercase charachter. Please try again."
+    play word hint guessed remainingGuess
 
 -- define the isCorrect function
 isCorrect :: String -> String -> Bool
 isCorrect guess word = guess == map toLower word
 
+-- define the isValidGuess function
+isValidGuess :: String -> Bool
+isValidGuess (h:t) = null t && isLower h
+isValidGuess "" = False
 
 -- define the showHint function
 showHint :: String -> String
 showHint hint =
   if hint == ""
     then ""
-    else "Hint: " ++ hint
+    else "Hint: " ++ hint ++ "\n"
 
 checkGuess :: String -> Char -> String -> String
 checkGuess word guess guessed =  
