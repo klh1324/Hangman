@@ -4,7 +4,14 @@ import Data.Char
 import Data.List
 import Control.Monad (replicateM)
 
+--------- Definitions ---------
+
+guessLimit :: Integer
 guessLimit = 7
+
+
+
+--------- Main Functions ---------
 
 -- define the hangman game
 hangman :: IO ()
@@ -37,14 +44,6 @@ hangman = do
             putStrLn "Invalid difficulty level. Please try again."
             hangman
 
-
-mapToRandomIndices :: Int -> (a -> a) -> [a] -> IO [a]
-mapToRandomIndices n f xs = do
-  let len = length xs
-  indices <- replicateM n $ randomRIO (0, len - 1)
-  return $ map (\(i, x) -> if i `elem` indices then f x else x) $ zip [0..] xs
-
-
 -- define the play function
 play :: String -> String -> String -> Integer -> IO ()
 play word hint guessed remainingGuess = do
@@ -74,14 +73,28 @@ play word hint guessed remainingGuess = do
     putStrLn "Invalid guess. You must enter a lowercase charachter. Please try again."
     play word hint guessed remainingGuess
 
+
+
+--------- Helper Functions ---------
+
+-- define the mapToRandomIndices function
+mapToRandomIndices :: Int -> (a -> a) -> [a] -> IO [a]
+mapToRandomIndices n f xs = do
+  let len = length xs
+  indices <- replicateM n $ randomRIO (0, len - 1)
+  return $ map (\(i, x) -> if i `elem` indices then f x else x) $ zip [0..] xs
+
+
 -- define the isCorrect function
 isCorrect :: String -> String -> Bool
 isCorrect guess word = guess == map toLower word
+
 
 -- define the isValidGuess function
 isValidGuess :: String -> Bool
 isValidGuess (h:t) = null t && isLower h
 isValidGuess "" = False
+
 
 -- define the showHint function
 showHint :: String -> String
@@ -90,10 +103,13 @@ showHint hint =
     then ""
     else "Hint: " ++ hint ++ "\n"
 
+
+-- define the checkGuess function
 checkGuess :: String -> Char -> String -> String
 checkGuess word guess guessed =  
   [if c == guess && g == '_' then c else g | (c, g) <- zip word guessed]
   
+
 -- define the randomWordAndHint function
 randomWordAndHint :: IO (String, String)
 randomWordAndHint = do
