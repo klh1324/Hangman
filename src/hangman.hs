@@ -10,8 +10,15 @@ import qualified Data.ByteString.Lazy as B
 
 --------- Definitions ---------
 
+-- Number of guesses allowed
 guessLimit :: Integer
 guessLimit = 7
+
+-- Mapping of the word with its corresponding hint
+type WordAndHint = (String, String)
+
+-- Mapping of the indices of the word with its corresponding character
+type MapIndices = String
 
 data MetaResult = MetaResult { pastWords :: [String], pastResults :: [Bool]} deriving (Show, Eq, Generic)
 
@@ -20,15 +27,12 @@ data Result =
   Won Int Int String |
   Lose Int String 
 
-data MetaData = 
-  MetaData String [Result]
 
 --------- Main Functions ---------
 
 -- define the hangman game
 hangman :: IO ()
 hangman = do
-
   initGame
   shouldContinue <- continuePlayGame
   if shouldContinue
@@ -36,6 +40,7 @@ hangman = do
   else
     putStrLn "GoodBye!"
 
+-- define the continuePlayGame
 continuePlayGame :: IO Bool
 continuePlayGame = do
   putStrLn "Do you want to continue?(y/n)"
@@ -47,7 +52,7 @@ continuePlayGame = do
       putStrLn "Invalid response. Please enter 'y' or 'n'."
       continuePlayGame      
 
--- define the play function
+-- define the initGame function
 initGame :: IO()
 initGame = do
   putStrLn "Welcome to Hangman! Choose a difficulty level:"
@@ -80,7 +85,7 @@ initGame = do
     
 
 -- define the play function
-play :: String -> String -> String -> Integer -> IO ()
+play :: String -> String -> MapIndices -> Integer -> IO ()
 play word hint guessed remainingGuess = do
   -- putStrLn word
   -- putStrLn guessed
@@ -113,6 +118,7 @@ play word hint guessed remainingGuess = do
 --------- Helper Functions ---------
 
 -- define the mapToRandomIndices function
+-- Map the function f to a certain number of characters n in the word xs with indices picked at random
 mapToRandomIndices :: Int -> (a -> a) -> [a] -> IO [a]
 mapToRandomIndices n f xs = do
   let len = length xs
@@ -126,12 +132,14 @@ isCorrect guess word = guess == map toLower word
 
 
 -- define the isValidGuess function
+-- Check if the guess is valid
 isValidGuess :: String -> Bool
 isValidGuess (h:t) = null t && isLower h
 isValidGuess "" = False
 
 
 -- define the showHint function
+-- Show the hint of the word if it exists for this difficulty level
 showHint :: String -> String
 showHint hint =
   if hint == ""
@@ -140,13 +148,15 @@ showHint hint =
 
 
 -- define the checkGuess function
-checkGuess :: String -> Char -> String -> String
+-- Check the guess against the word and update 'guessed' accordingly 
+checkGuess :: String -> Char -> MapIndices -> MapIndices
 checkGuess word guess guessed =  
   [if c == guess && g == '_' then c else g | (c, g) <- zip word guessed]
   
 
 -- define the randomWordAndHint function
-randomWordAndHint :: IO (String, String)
+-- Get a random word and its corresponding hint from the txt files
+randomWordAndHint :: IO WordAndHint
 randomWordAndHint = do
   wordList <- readFile "wordlist.txt"
   hintList <- readFile "hintlist.txt"
