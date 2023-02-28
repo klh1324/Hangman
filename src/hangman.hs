@@ -45,7 +45,7 @@ type WordAndHint = (String, String)
 type MapIndices = String
 
 -- MetaData Storage for all past results: List of Strings (guessed words) and booleans (result it won or lost)
-data MetaResult = MetaResult { pastResults :: [(String, Bool)]} deriving (Show, Eq, Generic)
+data MetaResult = MetaResult { pastResults :: [(String, Bool)]} deriving (Show, Generic)
 instance FromJSON MetaResult
 instance ToJSON MetaResult
 
