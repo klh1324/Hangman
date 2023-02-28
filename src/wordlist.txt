@@ -6,3 +6,5 @@ elderberry
 fig
 grape
 honeydew
+vancouver
+toronto
