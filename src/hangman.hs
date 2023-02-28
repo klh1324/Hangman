@@ -1,3 +1,9 @@
+-- Ues the following commands to run the program
+-- ghci
+-- :set -package aeson
+-- :l hangman.hs
+-- hangman
+
 import System.IO
 import System.Random
 import Data.Char
@@ -7,6 +13,7 @@ import Control.Monad (replicateM)
 import GHC.Generics (Generic)
 import Data.Aeson (FromJSON, ToJSON, encode, decode)
 import qualified Data.ByteString.Lazy as B
+import GHC.Utils.Binary (newReadState)
 
 --------- Definitions ---------
 
@@ -20,7 +27,9 @@ type WordAndHint = (String, String)
 -- Mapping of the indices of the word with its corresponding character
 type MapIndices = String
 
-data MetaResult = MetaResult { pastWords :: [String], pastResults :: [Bool]} deriving (Show, Eq, Generic)
+-- MetaData Storage for all past results: List of Strings (guessed words) and booleans (result it won or lost)
+data MetaResult = MetaResult { pastResults :: [(String, Bool)]} deriving (Show, Eq, Generic)
+
 
 data Result = 
   Continue Int Int String String | 
@@ -31,14 +40,20 @@ data Result =
 --------- Main Functions ---------
 
 -- define the hangman game
-hangman :: IO ()
+hangman :: IO MetaResult
 hangman = do
-  initGame
+  metaResults <- loadMetaResults
+  run metaResults
+  
+
+run :: MetaResult -> IO MetaResult
+run metaResults = do
+  newResults <- initGame metaResults
   shouldContinue <- continuePlayGame
   if shouldContinue
-    then hangman
-  else
-    putStrLn "GoodBye!"
+    then run newResults 
+  else 
+    return newResults
 
 -- define the continuePlayGame
 continuePlayGame :: IO Bool
@@ -53,8 +68,8 @@ continuePlayGame = do
       continuePlayGame      
 
 -- define the initGame function
-initGame :: IO()
-initGame = do
+initGame :: MetaResult -> IO MetaResult
+initGame metaResults = do
   putStrLn "Welcome to Hangman! Choose a difficulty level:"
   putStrLn "1. Easy"
   putStrLn "2. Medium"
@@ -65,30 +80,28 @@ initGame = do
     then do
       (word, hint) <- randomWordAndHint
       mapIndices <- (mapToRandomIndices (ceiling (fromIntegral (length word) / fromIntegral 4)) (const '_') (word))
-      play word []  mapIndices guessLimit
+      play word []  mapIndices guessLimit metaResults
     else if difficulty == "2"
       then do
         (word, hint) <- randomWordAndHint
         mapIndices <- (mapToRandomIndices (ceiling (fromIntegral (length word) / fromIntegral 2)) (const '_') (word))
-        play word []  mapIndices guessLimit
+        play word []  mapIndices guessLimit metaResults
       else if difficulty == "3"
         then do
           (word, hint) <- randomWordAndHint
-          play word [] (replicate ((length word)) '_') guessLimit
+          play word [] (replicate ((length word)) '_') guessLimit metaResults
         else if difficulty == "4"
           then do
             (word, hint) <- randomWordAndHint
-            play word hint  (replicate ((length word)) '_') guessLimit
+            play word hint  (replicate ((length word)) '_') guessLimit metaResults
           else do
             putStrLn "Invalid difficulty level. Please try again."
             hangman
     
 
 -- define the play function
-play :: String -> String -> MapIndices -> Integer -> IO ()
-play word hint guessed remainingGuess = do
-  -- putStrLn word
-  -- putStrLn guessed
+play :: String -> String -> MapIndices -> Integer -> MetaResult -> IO MetaResult
+play word hint guessed remainingGuess metaResults = do
   putStr (showHint hint)
   putStrLn guessed
   putStrLn ("You have " ++ show remainingGuess ++ " guesses remaning. Enter your guess:")
@@ -100,20 +113,40 @@ play word hint guessed remainingGuess = do
         then do
           putStrLn ("Incorrect guess! " ++ show (remainingGuess - 1) ++ " guesses remaining!")
           if (remainingGuess - 1) > 0 
-            then play word hint guessed (remainingGuess - 1) 
-          else putStrLn "Sorry! No more guesses remaining\n"
+            then play word hint guessed (remainingGuess - 1) metaResults
+          else do
+            let newResult = addLostGame word metaResults
+            putStrLn "Sorry! No more guesses remaining\n"
+            return newResult
       else if '_' `notElem` newGuessed -- correct guess and player wins
         then do
+          let newResult = addWonGame word metaResults
           putStrLn ("Correct! you have guessed the word " ++ word ++ "!\n" ++ "You win!")
+          return newResult
       else 
         do
         putStrLn ("Correct guess! " ++ show remainingGuess ++ " guesses remaining!")
-        play word hint newGuessed remainingGuess 
+        play word hint newGuessed remainingGuess  metaResults
   else do
     putStrLn "Invalid guess. You must enter a lowercase charachter. Please try again."
-    play word hint guessed remainingGuess
+    play word hint guessed remainingGuess metaResults
 
+--------- MetaResult Functions ---------
 
+loadMetaResults :: IO MetaResult 
+loadMetaResults = do
+  return (MetaResult [])
+
+addWonGame :: String -> MetaResult -> MetaResult
+addWonGame word (MetaResult results) = (MetaResult ((word, True):results))
+
+addLostGame :: String -> MetaResult -> MetaResult
+addLostGame word (MetaResult results) = (MetaResult ((word, False):results))
+
+-- getSize (MetaResult results) = length results
+-- printSz len = do 
+--   putStrLn(show len)
+--   return ()
 
 --------- Helper Functions ---------
 
