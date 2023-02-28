@@ -96,7 +96,7 @@ initGame metaResults = do
   levels <- difficultyLevels
   mapM_ (\(i, level) -> putStrLn (show i ++ ". " ++ levelName level)) (zip [1 ..] levels)
   difficulty <- getLine
-  let difficultyLevel = readMaybe difficulty >>= \n -> if n >= 0 && n < length levels then Just (levels !! n) else Nothing
+  let difficultyLevel = readMaybe difficulty >>= \n -> if n >= 1 && n <= length levels then Just (levels !! (n - 1)) else Nothing
   case difficultyLevel of
     Just level -> do
       (word, hint) <- randomWordAndHint
