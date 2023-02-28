@@ -21,6 +21,15 @@ import GHC.Utils.Binary (newReadState)
 guessLimit :: Integer
 guessLimit = 7
 
+jsonfile :: FilePath
+jsonfile = "result.json"
+
+wordfile :: FilePath
+wordfile = "wordlist.txt"
+
+hintfile :: FilePath
+hintfile = "hintlist.txt"
+
 -- Mapping of the word with its corresponding hint
 type WordAndHint = (String, String)
 
@@ -29,22 +38,21 @@ type MapIndices = String
 
 -- MetaData Storage for all past results: List of Strings (guessed words) and booleans (result it won or lost)
 data MetaResult = MetaResult { pastResults :: [(String, Bool)]} deriving (Show, Eq, Generic)
-
-
-data Result = 
-  Continue Int Int String String | 
-  Won Int Int String |
-  Lose Int String 
+instance FromJSON MetaResult
+instance ToJSON MetaResult
 
 
 --------- Main Functions ---------
 
 -- define the hangman game
-hangman :: IO MetaResult
+hangman :: IO ()
 hangman = do
-  metaResults <- loadMetaResults
-  run metaResults
-  
+  -- contents <- B.readFile file
+  -- let savedResults = decode contents
+  savedResults <- loadMetaResults
+  updatedResults <- run savedResults
+  putStrLn "Thank you for playing!"
+  B.writeFile jsonfile (encode updatedResults)
 
 run :: MetaResult -> IO MetaResult
 run metaResults = do
@@ -96,7 +104,7 @@ initGame metaResults = do
             play word hint  (replicate ((length word)) '_') guessLimit metaResults
           else do
             putStrLn "Invalid difficulty level. Please try again."
-            hangman
+            initGame metaResults
     
 
 -- define the play function
@@ -133,20 +141,19 @@ play word hint guessed remainingGuess metaResults = do
 
 --------- MetaResult Functions ---------
 
-loadMetaResults :: IO MetaResult 
+loadMetaResults :: IO MetaResult
 loadMetaResults = do
-  return (MetaResult [])
+  contents <- B.readFile jsonfile
+  let savedResults = decode contents :: Maybe MetaResult
+  case savedResults of
+    Just s -> return s
+    Nothing -> return (MetaResult [])
 
 addWonGame :: String -> MetaResult -> MetaResult
 addWonGame word (MetaResult results) = (MetaResult ((word, True):results))
 
 addLostGame :: String -> MetaResult -> MetaResult
 addLostGame word (MetaResult results) = (MetaResult ((word, False):results))
-
--- getSize (MetaResult results) = length results
--- printSz len = do 
---   putStrLn(show len)
---   return ()
 
 --------- Helper Functions ---------
 
@@ -191,10 +198,10 @@ checkGuess word guess guessed =
 -- Get a random word and its corresponding hint from the txt files
 randomWordAndHint :: IO WordAndHint
 randomWordAndHint = do
-  wordList <- readFile "wordlist.txt"
-  hintList <- readFile "hintlist.txt"
-  let words = lines wordList
-      hints = lines hintList
+  wordlist <- readFile wordfile
+  hintlist <- readFile hintfile
+  let words = lines wordlist
+      hints = lines hintlist
   index <- randomRIO (0, length words - 1)
   let word = words !! index
       hint = hints !! index
