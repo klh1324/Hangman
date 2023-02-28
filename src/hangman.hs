@@ -101,7 +101,7 @@ initGame metaResults = do
     Just level -> do
       (word, hint) <- randomWordAndHint
       mapIndices <- return (getMapIndices level word)
-      let gameState = HangmanGame word (hint_d level) mapIndices guessLimit metaResults
+      let gameState = HangmanGame word (if difficulty == "4" then hint else hint_d level) mapIndices guessLimit metaResults
       play gameState
     Nothing -> do
       putStrLn "Invalid difficulty level. Please try again."  
@@ -263,7 +263,11 @@ randomWordAndHint = do
   hintlist <- readFile hintfile
   let words = lines wordlist
       hints = lines hintlist
+  -- putStrLn words
+  -- putStrLn hints
   index <- randomRIO (0, length words - 1)
   let word = words !! index
       hint = hints !! index
+  -- putStrLn word
+  -- putStrLn hint
   return (word, hint)
