@@ -4,18 +4,52 @@ import Data.Char
 import Data.List
 import Control.Monad (replicateM)
 
+import GHC.Generics (Generic)
+import Data.Aeson (FromJSON, ToJSON, encode, decode)
+import qualified Data.ByteString.Lazy as B
+
 --------- Definitions ---------
 
 guessLimit :: Integer
 guessLimit = 7
 
+data MetaResult = MetaResult { pastWords :: [String], pastResults :: [Bool]} deriving (Show, Eq, Generic)
 
+data Result = 
+  Continue Int Int String String | 
+  Won Int Int String |
+  Lose Int String 
+
+data MetaData = 
+  MetaData String [Result]
 
 --------- Main Functions ---------
 
 -- define the hangman game
 hangman :: IO ()
 hangman = do
+
+  initGame
+  shouldContinue <- continuePlayGame
+  if shouldContinue
+    then hangman
+  else
+    putStrLn "GoodBye!"
+
+continuePlayGame :: IO Bool
+continuePlayGame = do
+  putStrLn "Do you want to continue?(y/n)"
+  response <- getLine
+  case response of
+    "y" -> return True
+    "n" -> return False
+    _ -> do
+      putStrLn "Invalid response. Please enter 'y' or 'n'."
+      continuePlayGame      
+
+-- define the play function
+initGame :: IO()
+initGame = do
   putStrLn "Welcome to Hangman! Choose a difficulty level:"
   putStrLn "1. Easy"
   putStrLn "2. Medium"
@@ -43,6 +77,7 @@ hangman = do
           else do
             putStrLn "Invalid difficulty level. Please try again."
             hangman
+    
 
 -- define the play function
 play :: String -> String -> String -> Integer -> IO ()
