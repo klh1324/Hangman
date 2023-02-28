@@ -263,11 +263,7 @@ randomWordAndHint = do
   hintlist <- readFile hintfile
   let words = lines wordlist
       hints = lines hintlist
-  -- putStrLn words
-  -- putStrLn hints
   index <- randomRIO (0, length words - 1)
   let word = words !! index
       hint = hints !! index
-  -- putStrLn word
-  -- putStrLn hint
   return (word, hint)
